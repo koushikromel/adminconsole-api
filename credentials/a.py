@@ -1,6 +1,6 @@
 import requests
 import inspect
-
+import json
 # a = requests.post(url="http://127.0.0.1:8118/absentees", data={"test":"data"})
 # a = requests.post(url="http://127.0.0.1:8118/absentees/fordate", json={"date": "2023-05-19", "b":12})
 
@@ -28,9 +28,8 @@ import inspect
 # print(docstring)
 
 
-
-# a = requests.get(url="http://127.0.0.1:8118/customer")
-# print(a.json())
-
-a = requests.post(url="http://127.0.0.1:8118/quotationandinvoice/invoice/year", json={"year":"2022"})
+a = requests.get(url="http://127.0.0.1:8118/login/sanjeev@onwords.in/san20")
 print(a.json())
+
+# a = requests.post(url="http://127.0.0.1:8118/customer/number", json={"number":"1522328535"})
+# print(a.json())

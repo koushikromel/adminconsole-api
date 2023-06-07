@@ -40,4 +40,3 @@ print(users)
 #     # print('User authenticated successfully')
 # except auth.AuthError as e:
 #     print('User authentication failed:', e)
-  
