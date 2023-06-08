@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from datetime import datetime
+import time
 
 app = FastAPI()
 config = {
@@ -136,7 +137,7 @@ async def absentees_fordate(request: Request,date:str):
     """This i sa docstring for absentees for date
     FORMAT DATE = 2023-02-01
     """
-    todays_date = date
+    todays_date = timestampcovert(date)
     currentmonth = datetime.now().strftime("%m")
     currentyear = datetime.now().strftime("%Y")
     absenteesList = []
@@ -196,65 +197,91 @@ async def customer_number(request: Request,customer_number:str):
         customer = "Not found"
     return customer
 
-@app.get("/staff/{staff_uid}/{month}")
+@app.get("/customer/date/{created_date}")
+async def customer_number(request: Request,created_date:str):
+    """This is getting customer details by phone number
+    FORMAT ATLEAST 10 NUMBERS
+    """
+    customer_data = database.child('customer_data').child("customer_details").get().val()
+    customerlist=[]
+    try:
+        for customer_number in customer_data:
+            timestamp = customer_data[customer_number]["createdtimestamp"]
+            timestampdate= timestampcovert(timestamp)
+            if timestampdate == created_date:
+                customerlist.append(customer_data[customer_number])
+    except:
+        pass
+    return customerlist
+
+@app.get("/staffworkmonth/{staff_uid}/{month}")
 async def staff_month(request: Request,staff_uid:str,month:str):
     """This is getting staff workmanager details by month
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    staff_data = database.child('staff').get().val()
+    staff_data = database.child('office_staffs').child("workdone").get().val()
     try:
         staff_work = staff_data[staff_uid]["workManager"]["timeSheet"][currentyear][month]
     except:
         staff_work="Not found"
     return staff_work
 
-@app.get("/staff/{staff_id}/{date}")
+@app.get("/staffworkdate/{staff_id}/{date}")
 async def staff_date(request: Request,staff_id:str,date:str):
     """This is getting staff workmanager details by date
     FORMAT DATE = 2023-02-01
     """
-    staff_data = database.child('staff').get().val()
+    datedata = timestampcovert(date)
+    staff_data = database.child('office_staffs').child("workdone").get().val()
+    staff_date_data = staff_data[staff_id]["workManager"]["timeSheet"]
     try:
-        staff_date_data = staff_data[staff_id]["workManager"]["timeSheet"]
         for year in staff_date_data:
             for month in staff_date_data[year]:
                 for dat in staff_date_data[year][month]:
-                    if dat == date:
-                        staff_work = staff_date_data[year][month][dat]
+                    if dat == datedata:
+                        staff_work = staff_date_data[year][month][datedata]
                     else:
                         pass
         return staff_work            
     except:
         staff_work = "Not found"               
-        return staff_work
+    return staff_work
 
-@app.get("/financialanalyzing/expense/{month}")
+@app.get("/financialanalyzing/expensemonth/{month}")
 async def expense_month(request: Request,month:str):
     """This is getting all the Expense details by month
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    expense_data = database.child('FinancialAnalyzing').get().val()
+    expense_data = database.child("general_office").child("financial_analyzer").get().val()
     try:
         expensemonth_data = expense_data["Expense"][currentyear][month]
     except:
          expensemonth_data = "Not found"   
     return expensemonth_data
 
-@app.get("/financialanalyzing/expense/{date}")
+@app.get("/financialanalyzing/expensedate/{date}")
 async def expense_date(request: Request,date:str):
     """This is getting all the Expense details by date
     FORMAT DATE = 2023-02-01
     """
-    expensedate_data = database.child('FinancialAnalyzing').get().val()
+    expensedate_data = database.child("general_office").child("financial_analyzer").get().val()
     expense_details=[]
     try:
         for year in expensedate_data["Expense"]:
-            for month in expensedate_data[year]:
-                for dat in expensedate_data[year][month]:
-                        if expensedate_data[year][month][dat]["EnteredDate"] == date:
-                            expense_details.append(expensedate_data[year][month][dat])
+            for month in expensedate_data["Expense"][year]:
+                for dat in expensedate_data["Expense"][year][month]:
+                    try:
+                        timedata = expensedate_data["Expense"][year][month][dat]['enteredtimestamp']
+                        enetereddate=timestampcovert(timedata)
+                        if date == str(enetereddate):
+                            expense_details.append(expensedate_data["Expense"][year][month][dat])
+                        else:
+                            pass    
+                    except:
+                        pass   
+                    # expense_details.append(expensedate_data[year][month][dat]['timestamp'])
     except:
          expense_details = "Not found"
     return expense_details
@@ -265,91 +292,107 @@ async def income_month(request: Request,month:str):
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    expense_data = database.child('FinancialAnalyzing').get().val()
+    expense_data = database.child("general_office").child("financial_analyzer").get().val()
     try:
         expensemonth_data = expense_data["Income"][currentyear][month]
     except:
          expensemonth_data = "Not found"   
     return expensemonth_data
 
-@app.get("/financialanalyzing/income/{date}")
+@app.get("/financialanalyzing/incomedate/{date}")
 async def income_date(request: Request,date:str):
     """This is getting all the Income details by date
     FORMAT DATE = 2023-02-01
     """
-    response = await request.json()
-    date = response["date"]
-    incomedate_data = database.child('FinancialAnalyzing').get().val()
-    expense_details=[]
+    incomedate_data = database.child("general_office").child("financial_analyzer").get().val()
+    income_details=[]
     try:
         for year in incomedate_data["Income"]:
             for month in incomedate_data["Income"][year]:
                 for dat in incomedate_data["Income"][year][month]:
-                        if incomedate_data["Income"][year][month][dat]["EnteredDate"] == date:
-                            expense_details.append(incomedate_data["Income"][year][month][dat])
-        return expense_details                    
+                    try:
+                        timedata = incomedate_data["Income"][year][month][dat]['enteredtimestamp']
+                        enetereddate=timestampcovert(timedata)
+                        if date == enetereddate:
+                            income_details.append(incomedate_data["Income"][year][month][dat])
+                        else:
+                            pass    
+                    except:
+                        pass  
+        return income_details                    
     except:
-         expense_details = "Not found"
-    return expense_details
+        income_details = "Not found"
+    return income_details
 
-@app.post("/quotationandinvoice/quotation/year")
-async def quotation_year(request: Request):
+@app.get("/quotationandinvoice/quotation/{year}")
+async def quotation_year(request: Request,year:str):
     """This is getting all the quotation details by year
     FORMAT YEAR = 2023
     """
-    response = await request.json()
-    year = response["year"]
-    quotation_data = database.child('QuotationAndInvoice').get().val()
+    quotation_data = database.child('customer_data').child("quotation_and_invoice").get().val()
     try:
         quotation_details = quotation_data["QUOTATION"][year]
     except:
         quotation_details = "Not found"
     return quotation_details
 
-@app.post("/quotationandinvoice/quotation/month")
-async def quotation_month(request: Request):
+@app.get("/quotationandinvoice/quotation/{month}")
+async def quotation_month(request: Request,month:str):
     """This is getting all the quotation details by month
     FORMAT MONTH = 02
     """
-    response = await request.json()
-    month = response["month"]
     currentyear = datetime.now().strftime("%Y")
-    quotation_data = database.child('QuotationAndInvoice').get().val()
+    quotation_data = database.child('customer_data').child("quotation_and_invoice").get().val()
     try:
         quotationmonth_data = quotation_data["QUOTATION"][currentyear][month]     
     except:
         quotationmonth_data = "Not found"
     return quotationmonth_data
 
-@app.post("/quotationandinvoice/invoice/year")
-async def invoice_year(request: Request):
+@app.get("/quotationandinvoice/invoice/{year}")
+async def invoice_year(request: Request,year:str):
     """This is getting all the invoice details by year
     FORMAT YEAR = 2023
     """
-    response = await request.json()
-    year = response["year"]
-    invoice_data = database.child('QuotationAndInvoice').get().val()
+    invoice_data = database.child('customer_data').child('quotation_and_invoice').get().val()
     try:
         invoice_details=invoice_data["INVOICE"][year]
-
     except:
         invoice_details = "Not found"
     return invoice_details
 
-@app.post("/quotationandinvoice/invoice/month")
-async def invoice_month(request: Request):
+@app.get("/quotationandinvoice/invoice/{month}")
+async def invoice_month(request: Request,month:str):
     """This is getting all the invoice details by month
     FORMAT MONTH = 02
     """
-    response = await request.json()
-    month = response["month"]
     currentyear = datetime.now().strftime("%Y")
-    invoice_data = database.child('QuotationAndInvoice').get().val()
+    invoice_data = database.child('customer_data').child('quotation_and_invoice').get().val()
     try:
         invoicemonth_data = invoice_data["INVOICE"][currentyear][month]     
     except:
         invoicemonth_data = "Not found"
     return invoicemonth_data
+
+@app.get("/quotationandinvoice/invoicedate/{date}")
+async def invoice_month(request: Request,date:str):
+    """This is getting all the invoice details by month
+    FORMAT MONTH = 02
+    """
+    currentyear = datetime.now().strftime("%Y")
+    invoice_data = database.child('customer_data').child('quotation_and_invoice').get().val()
+    invoicelist=[]
+    try:
+        for invoiceyear in invoice_data["INVOICE"]:
+            for invoicemonth in invoice_data["INVOICE"][invoiceyear]:
+                for invoiceid in invoice_data["INVOICE"][invoiceyear][invoicemonth]:
+                    timestamp = invoice_data["INVOICE"][invoiceyear][invoicemonth][invoiceid]['TimeStamp']
+                    timedata = timestampcovert(timestamp)
+                    if date == timedata:
+                        invoicelist.append(invoice_data["INVOICE"][invoiceyear][invoicemonth][invoiceid])
+    except:
+        invoicelist = "Not found"
+    return invoicelist
 
 @app.get("/suggestion")
 def suggestion():
@@ -358,32 +401,31 @@ def suggestion():
     suggestion_data = database.child('suggestion').get().val()
     return suggestion_data
 
-@app.post("/suggestion/date")
-async def suggestion_date(request: Request):
+@app.get("/suggestion/{date}")
+async def suggestion_date(request: Request,date:str):
     """This is getting all the suggestion details by date
     FORMAT DATE = 2023-01-01
     """
-    response = await request.json()
-    date = response["date"]
     suggestion_data = database.child('suggestion').get().val()
     suggestiondate_data=[]
-    for timedata in suggestion_data:
-        for dat in suggestion_data[timedata]:
-            try:
-                if suggestion_data[timedata]["date"] == date:
-                    print(suggestion_data[timedata]["date"])
-                    suggestiondate_data.append(suggestion_data[timedata][dat])
-                else:
-                    pass
-            except:
-                suggestiondate_data = "Not found"
+    for timedate in suggestion_data:
+        try:
+            print(suggestion_data[timedate])
+            timestamp = suggestion_data[timedate]["Timestamp"]
+            timedata= timestampcovert(timestamp)
+            if timedata == date:
+                print("vjcjhchj")
+                suggestiondate_data.append(suggestion_data[timedate])
+        except:
+            pass
     return suggestiondate_data
 
 @app.get("/refreshments")
 def refreshments():
     """This is a getting currentday refreshment details
     """
-    currentdate = datetime.now().strftime("%Y-%m-%d")
+    currentdate = "2023-06-02"
+    # currentdate = datetime.now().strftime("%Y-%m-%d")
     refreshments_data = database.child("general_office").child('refreshments').get().val()
     try:
         for dat in refreshments_data:
@@ -396,13 +438,11 @@ def refreshments():
         refreshmentsdate_data = "Not found"  
         return refreshmentsdate_data
 
-@app.post("/refreshments/date")
-async def refreshment_date(request: Request):
+@app.get("/refreshments/{date}")
+async def refreshment_date(request: Request,date:str):
     """This is getting all the refreshment details by date 
        FORMAT DATE = 2023-02-01
     """
-    response = await request.json()
-    date = response["date"]
     refreshments_data = database.child("general_office").child('refreshments').get().val()
     try:
         for dat in refreshments_data:
@@ -410,7 +450,7 @@ async def refreshment_date(request: Request):
                     refreshmentsdate_data = refreshments_data[dat]
                 else:
                     pass
-        return refreshmentsdate_data        
+        return refreshmentsdate_data     
     except:
         refreshmentsdate_data = "Not found"  
         return refreshmentsdate_data
@@ -426,43 +466,43 @@ def prpoints():
     """This is a getting all prpoints details
     """
     prpointsalldata=[]
-    prpoints_data = database.child('PRDashboard').get().val()
-    for uid in prpoints_data["pr_points"]:
-        prpointsalldata.append(prpoints_data["pr_points"][uid])
+    prpoints_data = database.child('general_office').child('pr_dashboard').child('pr_points').get().val()
+    for uid in prpoints_data:
+        prpointsalldata.append(prpoints_data[uid])
     return prpointsalldata
 
+@app.get("/prpoints")
+def prpoints():
+    """This is a getting all prpoints details
+    """
+    prpointsalldata=[]
+    prpoints_data = database.child('general_office').child('pr_dashboard').child('pr_points').get().val()
+    for uid in prpoints_data:
+        prpointsalldata.append(prpoints_data[uid])
+    return prpointsalldata
 
 @app.get("/prpoints/cycle")
 def prpoints_cycle():
     """This is a getting current cycle details
     """
-    todaysDate = int(datetime.now().strftime("%d"))
+    # todaysDate = int(datetime.now().strftime("%d"))
     currentyear = datetime.now().strftime("%Y")
-    currentmonth = datetime.now().strftime("%m")
-    prpoints_data = database.child('PRDashboard').get().val()
+    # currentmonth = datetime.now().strftime("%m")
+    current_week = datetime.now().strftime("%W")
     prpoints=[]
     prpointstotal=[]
     prname=[]
-    for uid in prpoints_data["pr_points"]:
-        if  todaysDate <= 15:
+    prpoints_data = database.child('general_office').child('pr_dashboard').child('pr_points').get().val()
+    for uid in prpoints_data:
             try:
-                prpoints.append(prpoints_data["pr_points"][uid][currentyear][currentmonth]["first_cycle_points"])
+                prpoints.append(prpoints_data[uid][currentyear][current_week]["weekly_points"])
             except:
                 prpoints.append(0)
             try:
-                prpointstotal.append(prpoints_data["pr_points"][uid][currentyear][currentmonth]["first_cycle_total_points"])
+                prpointstotal.append(prpoints_data[uid][currentyear][current_week]["weekly_total_points"])
             except:
-                prpointstotal.append(0)     
-        else:
-            try:
-                prpoints.append(prpoints_data["pr_points"][uid][currentyear][currentmonth]["second_cycle_points"])
-            except:
-                prpoints.append(0)
-            try:
-                prpointstotal.append(prpoints_data["pr_points"][uid][currentyear][currentmonth]["second_cycle_total_points"])
-            except:
-                prpointstotal.append(0)           
-        prname.append(prpoints_data["pr_points"][uid]["name"])
+                prpointstotal.append(0)
+            prname.append(prpoints_data[uid]["name"])
     total_data = zip(prname,prpoints,prpointstotal)
 
     final_data = []
@@ -470,23 +510,21 @@ def prpoints_cycle():
         final_data.append({"name":name,"points":points,"totalpoints":totalpoints})
     return final_data
 
-@app.post("/prpoints/month")
-async def prpoints_month(request: Request):
+@app.get("/prpoints/{current_week}")
+async def prpoints_month(request: Request,current_week:str):
     """This is getting all the prpoints details by month
     FORMAT MONTH = 02
     """
-    response = await request.json()
-    month = response["month"]
     currentyear = datetime.now().strftime("%Y")
-    prpoints_data = database.child('PRDashboard').get().val()
+    prpoints_data = database.child('general_office').child('pr_dashboard').child('pr_points').get().val()
     prpointsdata=[]
     prname=[]
-    for uid in prpoints_data["pr_points"]:
+    for uid in prpoints_data:
         try:
-            prpointsdata.append(prpoints_data["pr_points"][uid][currentyear][month])
+            prpointsdata.append(prpoints_data[uid][currentyear][current_week])
         except:
-            prpointsdata.append("Not found")
-        prname.append(prpoints_data["pr_points"][uid]["name"])
+            prpointsdata.append(0)
+        prname.append(prpoints_data[uid]["name"])
     total_data = zip(prname,prpointsdata)
 
     final_data = []
@@ -494,43 +532,38 @@ async def prpoints_month(request: Request):
         final_data.append({"name":name,"data":points})
     return final_data
 
-@app.get("/prpoints/team")
-def prpoints_team():
-    """This is a getting all prpoints namelist
-    """
-    prnamelist=[]
-    prpoints_data = database.child('PRDashboard').get().val()
-    for team in prpoints_data["pr_team"]:
-        for names in prpoints_data["pr_team"][team]:
-            prnamelist.append(prpoints_data["pr_team"][team][names])
-    return prnamelist
-
 @app.get("/leavedetails")
 def leavedetails():
     """This is a getting all leavedetails
     """
-    leaveDetails_data = database.child('leaveDetails').get().val()
+    leaveDetails_data = database.child('office_staffs').child('leave_details').get().val()
     leavedetailsall = []
     for uid in leaveDetails_data:
-        leavedetailsall.append(leaveDetails_data[uid])
+        leavedetailsall.append(leaveDetails_data[uid]['leaveApplied'])
     return leavedetailsall
 
 @app.get("/leavedetails/currentmonth")
 def leavedetails():
     """This is a getting all leavedetails
     """
-    leaveDetails_data = database.child('leaveDetails').get().val()
+    leaveDetails_data = database.child('office_staffs').child('leave_details').get().val()
     currentyear = datetime.now().strftime("%Y")
     currentmonth = datetime.now().strftime("%m")
-    print(currentmonth)
     leavedetailsall = []
     for uid in leaveDetails_data:
         try:
             leavedetailsall.append(leaveDetails_data[uid]["leaveApplied"][currentyear][currentmonth])
         except:
-            pass    
+            pass
     return leavedetailsall
 
+def timestampcovert(date):
+    try:
+        date_obj = datetime.fromtimestamp(date)
+    except:
+        date_obj = datetime.fromtimestamp(date / 1000)    
+    timestampdate = date_obj.strftime("%Y-%m-%d") 
+    return timestampdate
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8118 , reload=True)
