@@ -3,10 +3,10 @@ import uvicorn
 import pyrebase
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+# from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+# from pydantic import BaseModel
 from datetime import datetime
-import time
+import pymongo
 
 app = FastAPI()
 config = {
@@ -19,6 +19,12 @@ config = {
 firebase = pyrebase.initialize_app(config=config)
 database = firebase.database()
 authentication = firebase.auth()
+
+myclient = pymongo.MongoClient("mongodb+srv://koushik:koushik@cluste111.bq7qcte.mongodb.net/")
+mydb = myclient["testdb"]
+mycol = mydb["test coll"]
+mm = mycol.find()
+a = next(mm)
 
 @app.get("/")
 def home():
@@ -58,11 +64,10 @@ async def staff_name(request: Request,uid:str):
     """This is for getting staff name
     By UID
     """
-    staff_details = database.child('office_staffs').child("staff_details").get().val()
     try:
-        staffname = staff_details[uid]["name"]
+        staffname=a["staff_details"][uid]["name"]
     except:
-        staffname="Not found"
+        staffname="Not found"    
     return staffname
 
 @app.get("/staffdetails/department/{uid}")
@@ -70,9 +75,8 @@ async def staff_department(request: Request,uid:str):
     """This is for getting staff department
     By UID
     """
-    staff_details = database.child('office_staffs').child("staff_details").get().val()
     try:
-        staffdepartment = staff_details[uid]["department"]
+        staffdepartment=a["staff_details"][uid]["department"]
     except:
         staffdepartment="Not found"
     return staffdepartment
@@ -82,11 +86,10 @@ async def staff_email(request: Request,uid:str):
     """This is for getting staff email
     By UID
     """ 
-    staff_details = database.child('office_staffs').child("staff_details").get().val()
     try:
-        staffdemail = staff_details[uid]["email"]
+        staffdemail=a["staff_details"][uid]["email"]
     except:
-        staffdemail="Not found"    
+        staffdemail="Not found" 
     return staffdemail
 
 @app.get("/staffdetails/{uid}")
@@ -94,20 +97,18 @@ async def staff_details(request: Request,uid:str):
     """This is for getting staff name,email and department
     By UID
     """
-    staff_details = database.child('office_staffs').child("staff_details").get().val()
     try:
-        staffname = staff_details[uid]["name"]
+        staffname = a["staff_details"][uid]["name"]
     except:
         staffname = "Not found"
     try:     
-        staffemail = staff_details[uid]["email"]
+        staffemail = a["staff_details"][uid]["department"]
     except:
         staffemail = "Not found"
     try:        
-        staffdepartment = staff_details[uid]["department"]
+        staffdepartment = a["staff_details"][uid]["email"]
     except:
         staffdepartment = "Not found"
-
     return staffname,staffemail,staffdepartment
 
 @app.get("/absentees")
@@ -118,10 +119,10 @@ def absentees():
     currentmonth = datetime.now().strftime("%m")
     currentyear = datetime.now().strftime("%Y")
     absenteesList = []
-    virtualdattendance = database.child("attendance_logs").child("virtual_attendance").get().val()
-    punch_data = database.child("attendance_logs").child("fingerprint").get().val()
-
+    virtualdattendance = a["virtualAttendance"]
+    punch_data = a["fingerPrint"]
     for staffuid in punch_data:
+        print(staffuid)
         try:
             punch_data[staffuid][todays_date]
         except:
@@ -182,7 +183,7 @@ async def inventory_id(request: Request,inventory_id:str):
 def customer():
     """This is getting all the inventory details
     """
-    customer_data = database.child('customer_data').child("customer_details").get().val()
+    customer_data = a["customer"]
     return customer_data
 
 @app.get("/customer/{customer_number}")
@@ -190,9 +191,8 @@ async def customer_number(request: Request,customer_number:str):
     """This is getting customer details by phone number
     FORMAT ATLEAST 10 NUMBERS
     """
-    customer_data = database.child('customer_data').child("customer_details").get().val()
     try:
-        customer = customer_data[customer_number]
+        customer = a["customer"][customer_number]
     except:
         customer = "Not found"
     return customer
@@ -202,13 +202,30 @@ async def customer_number(request: Request,created_date:str):
     """This is getting customer details by phone number
     FORMAT ATLEAST 10 NUMBERS
     """
-    customer_data = database.child('customer_data').child("customer_details").get().val()
+    customer_data = a["customer"]
     customerlist=[]
     try:
         for customer_number in customer_data:
-            timestamp = customer_data[customer_number]["createdtimestamp"]
-            timestampdate= timestampcovert(timestamp)
-            if timestampdate == created_date:
+            timestamp = customer_data[customer_number]["created_date"]
+            if timestamp == created_date:
+                print(customer_data[customer_number])
+                customerlist.append(customer_data[customer_number])
+    except:
+        pass
+    return customerlist
+
+@app.get("/customer/date/{created_name}")
+async def customer_number(request: Request,created_name:str):
+    """This is getting customer details by phone number
+    FORMAT ATLEAST 10 NUMBERS
+    """
+    customer_data = a["customer"]
+    customerlist=[]
+    try:
+        for customer_number in customer_data:
+            createdperson = customer_data[customer_number]["created_by"]
+            if createdperson == created_name:
+                print(customer_data[customer_number])
                 customerlist.append(customer_data[customer_number])
     except:
         pass
@@ -567,3 +584,17 @@ def timestampcovert(date):
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8118 , reload=True)
+
+#     import pymongo
+
+# myclient = pymongo.MongoClient("mongodb+srv://koushik:koushik@cluste111.bq7qcte.mongodb.net/")
+# mydb = myclient["testdb"]
+# mycol = mydb["newtest"]
+
+# # mylist={'name':'create todo file'}
+# # mycol.insert_one(mylist)
+# mm = mycol.find()
+# a = next(mm)
+# print(a["staff_details"])
+# print("=====================")
+# print(a["all_staff"])
