@@ -3,8 +3,6 @@ import uvicorn
 import pyrebase
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, status
-# from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-# from pydantic import BaseModel
 from datetime import datetime
 import pymongo
 
@@ -24,7 +22,7 @@ myclient = pymongo.MongoClient("mongodb+srv://koushik:koushik@cluste111.bq7qcte.
 mydb = myclient["testdb"]
 mycol = mydb["test coll"]
 mm = mycol.find()
-a = next(mm)
+alldata = next(mm)
 
 @app.get("/")
 def home():
@@ -37,7 +35,7 @@ async def login(request: Request,email:str,password:str):
     :return:
     Enter email with password
     """
-    print(f"the username is{email} password is{password}")
+    # print(f"the username is{email} password is{password}")
     # response = await request.json()
     # print(f"Response is {response}")
     # email = response["email"]
@@ -48,13 +46,14 @@ async def login(request: Request,email:str,password:str):
         return {"user id":userid}
     except Exception as error:
         error_message = str(error)
-        print(f'Error is {error_message}')
+        # print(f'Error is {error_message}')
         if "EMAIL_NOT_FOUND" in error_message:
             error = {"Error": "Email Not Found"}
         if "INVALID_PASSWORD" in error_message:
             error = {"Error": "Invalid Password"}
         else:
-            print('some other error')
+            pass
+            # print('some other error')
     # print(f"User is {user}")
         return error
 
@@ -65,7 +64,7 @@ async def staff_name(request: Request,uid:str):
     By UID
     """
     try:
-        staffname=a["staff_details"][uid]["name"]
+        staffname=alldata["staff_details"][uid]["name"]
     except:
         staffname="Not found"    
     return staffname
@@ -76,7 +75,7 @@ async def staff_department(request: Request,uid:str):
     By UID
     """
     try:
-        staffdepartment=a["staff_details"][uid]["department"]
+        staffdepartment=alldata["staff_details"][uid]["department"]
     except:
         staffdepartment="Not found"
     return staffdepartment
@@ -87,7 +86,7 @@ async def staff_email(request: Request,uid:str):
     By UID
     """ 
     try:
-        staffdemail=a["staff_details"][uid]["email"]
+        staffdemail=alldata["staff_details"][uid]["email"]
     except:
         staffdemail="Not found" 
     return staffdemail
@@ -98,61 +97,65 @@ async def staff_details(request: Request,uid:str):
     By UID
     """
     try:
-        staffname = a["staff_details"][uid]["name"]
+        staffname = alldata["staff_details"][uid]["name"]
     except:
         staffname = "Not found"
     try:     
-        staffemail = a["staff_details"][uid]["department"]
+        staffemail = alldata["staff_details"][uid]["department"]
     except:
         staffemail = "Not found"
     try:        
-        staffdepartment = a["staff_details"][uid]["email"]
+        staffdepartment = alldata["staff_details"][uid]["email"]
     except:
         staffdepartment = "Not found"
     return staffname,staffemail,staffdepartment
 
 @app.get("/absentees")
 def absentees():
-    """This is a tetingasdfasdf
+    """This is getting the today absentees
     """
     todays_date = datetime.now().strftime("%Y-%m-%d")
     currentmonth = datetime.now().strftime("%m")
     currentyear = datetime.now().strftime("%Y")
     absenteesList = []
-    virtualdattendance = a["virtualAttendance"]
-    punch_data = a["fingerPrint"]
-    for staffuid in punch_data:
-        print(staffuid)
-        try:
-            punch_data[staffuid][todays_date]
-        except:
-           try:
-               virtualdattendance[staffuid][currentyear][currentmonth][todays_date]
-           except:
-               absenteesList.append(punch_data[staffuid]["name"])   
-    return {"absentees_list": absenteesList,"absenteesCount":len(absenteesList)}
+    virtualdattendance = alldata["virtualAttendance"]
+    punch_data = alldata["fingerPrint"]
+    try:
+        for staffuid in punch_data:
+            try:
+                punch_data[staffuid][todays_date]
+            except:
+                try:
+                    virtualdattendance[staffuid][currentyear][currentmonth][todays_date]
+                except:
+                    absenteesList.append(punch_data[staffuid]["name"])
+        return {"absentees_list": absenteesList,"absenteesCount":len(absenteesList)}         
+    except:
+        return "Not Found"
+    
 
 
 @app.get("/absentees/{date}")
 async def absentees_fordate(request: Request,date:str):
-    """This i sa docstring for absentees for date
+    """This getting absentees by date
     FORMAT DATE = 2023-02-01
     """
-    todays_date = timestampcovert(date)
-    currentmonth = datetime.now().strftime("%m")
-    currentyear = datetime.now().strftime("%Y")
+    
+    dtNow = datetime.strptime(date, "%Y-%m-%d")
+    todays_date = dtNow.strftime("%Y-%m-%d")
+    currentmonth = dtNow.strftime("%m")
+    currentyear = dtNow.strftime("%Y")
     absenteesList = []
-    virtualdattendance = database.child("attendance_logs").child("virtual_attendance").get().val()
-    punch_data = database.child("attendance_logs").child("fingerprint").get().val()
-
+    virtualdattendance = alldata["virtualAttendance"]
+    punch_data = alldata["fingerPrint"]
     for staffuid in punch_data:
         try:
             punch_data[staffuid][todays_date]
         except:
            try:
-               virtualdattendance[staffuid][currentyear][currentmonth][todays_date]
+            virtualdattendance[staffuid][currentyear][currentmonth][todays_date]
            except:
-               absenteesList.append(punch_data[staffuid]["name"])   
+            absenteesList.append(punch_data[staffuid]["name"])   
     return {"absentees_list": absenteesList,"absenteesCount":len(absenteesList)}
 
 @app.get("/inventory")
@@ -160,7 +163,7 @@ def inventory():
     """This is getting all the inventory details
     """
     inventoryList = []
-    inventory_data = database.child('general_office').child("inventory_management").get().val()
+    inventory_data = alldata["inventory_management"]
     for id in inventory_data:
         inventoryList.append(inventory_data[id])
     return inventoryList
@@ -169,11 +172,9 @@ def inventory():
 async def inventory_id(request: Request,inventory_id:str):
     """This is getting inventory details by id
     """
-    inventory_data = database.child('general_office').child("inventory_management").get().val()
+    inventory_data = alldata["inventory_management"]
     try:
-        for id in inventory_data:
-            if id == inventory_id:
-                inventoryid_data = inventory_data[id]
+        inventoryid_data = inventory_data[inventory_id]
         return inventoryid_data         
     except:
         inventoryid_data = "Not found"  
@@ -181,18 +182,18 @@ async def inventory_id(request: Request,inventory_id:str):
 
 @app.get("/customer")
 def customer():
-    """This is getting all the inventory details
+    """This is getting all the customer details
     """
-    customer_data = a["customer"]
+    customer_data = alldata["customer"]
     return customer_data
 
 @app.get("/customer/{customer_number}")
 async def customer_number(request: Request,customer_number:str):
     """This is getting customer details by phone number
-    FORMAT ATLEAST 10 NUMBERS
+    FORMAT ATLEAST 10 DIGITS NUMBERS
     """
     try:
-        customer = a["customer"][customer_number]
+        customer = alldata["customer"][customer_number]
     except:
         customer = "Not found"
     return customer
@@ -200,44 +201,44 @@ async def customer_number(request: Request,customer_number:str):
 @app.get("/customer/date/{created_date}")
 async def customer_number(request: Request,created_date:str):
     """This is getting customer details by phone number
-    FORMAT ATLEAST 10 NUMBERS
+    FORMAT 2023-01-16
     """
-    customer_data = a["customer"]
+    customer_data = alldata["customer"]
     customerlist=[]
     try:
         for customer_number in customer_data:
             timestamp = customer_data[customer_number]["created_date"]
             if timestamp == created_date:
-                print(customer_data[customer_number])
                 customerlist.append(customer_data[customer_number])
     except:
         pass
     return customerlist
 
-@app.get("/customer/date/{created_name}")
+@app.get("/customer/created_name/{created_name}")
 async def customer_number(request: Request,created_name:str):
-    """This is getting customer details by phone number
-    FORMAT ATLEAST 10 NUMBERS
+    """This is getting customer details by created person name
+    FORMAT Jeeva S include space
     """
-    customer_data = a["customer"]
+    customer_data = alldata["customer"]
     customerlist=[]
     try:
         for customer_number in customer_data:
             createdperson = customer_data[customer_number]["created_by"]
             if createdperson == created_name:
-                print(customer_data[customer_number])
                 customerlist.append(customer_data[customer_number])
+            else:
+                pass
     except:
-        pass
+        pass        
     return customerlist
 
 @app.get("/staffworkmonth/{staff_uid}/{month}")
 async def staff_month(request: Request,staff_uid:str,month:str):
     """This is getting staff workmanager details by month
-    FORMAT MONTH = 02
+    FORMAT MONTH = 02 MUST TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
-    staff_data = database.child('office_staffs').child("workdone").get().val()
+    staff_data = alldata["staff"]
     try:
         staff_work = staff_data[staff_uid]["workManager"]["timeSheet"][currentyear][month]
     except:
@@ -249,8 +250,8 @@ async def staff_date(request: Request,staff_id:str,date:str):
     """This is getting staff workmanager details by date
     FORMAT DATE = 2023-02-01
     """
-    datedata = timestampcovert(date)
-    staff_data = database.child('office_staffs').child("workdone").get().val()
+    datedata = date
+    staff_data = alldata["staff"]
     staff_date_data = staff_data[staff_id]["workManager"]["timeSheet"]
     try:
         for year in staff_date_data:
@@ -268,10 +269,10 @@ async def staff_date(request: Request,staff_id:str,date:str):
 @app.get("/financialanalyzing/expensemonth/{month}")
 async def expense_month(request: Request,month:str):
     """This is getting all the Expense details by month
-    FORMAT MONTH = 02
+    FORMAT MONTH = 02 MUST TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
-    expense_data = database.child("general_office").child("financial_analyzer").get().val()
+    expense_data = alldata["FinancialAnalyzing"]
     try:
         expensemonth_data = expense_data["Expense"][currentyear][month]
     except:
@@ -283,16 +284,15 @@ async def expense_date(request: Request,date:str):
     """This is getting all the Expense details by date
     FORMAT DATE = 2023-02-01
     """
-    expensedate_data = database.child("general_office").child("financial_analyzer").get().val()
+    expensedate_data = alldata["FinancialAnalyzing"]
     expense_details=[]
     try:
         for year in expensedate_data["Expense"]:
             for month in expensedate_data["Expense"][year]:
                 for dat in expensedate_data["Expense"][year][month]:
                     try:
-                        timedata = expensedate_data["Expense"][year][month][dat]['enteredtimestamp']
-                        enetereddate=timestampcovert(timedata)
-                        if date == str(enetereddate):
+                        timedata = expensedate_data["Expense"][year][month][dat]['EnteredDate']
+                        if date == timedata:
                             expense_details.append(expensedate_data["Expense"][year][month][dat])
                         else:
                             pass    
@@ -306,10 +306,10 @@ async def expense_date(request: Request,date:str):
 @app.get("/financialanalyzing/income/{month}")
 async def income_month(request: Request,month:str):
     """This is getting all the Income details by month
-    FORMAT MONTH = 02
+    FORMAT MONTH = 02 MUST TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
-    expense_data = database.child("general_office").child("financial_analyzer").get().val()
+    expense_data = alldata["FinancialAnalyzing"]
     try:
         expensemonth_data = expense_data["Income"][currentyear][month]
     except:
@@ -321,16 +321,16 @@ async def income_date(request: Request,date:str):
     """This is getting all the Income details by date
     FORMAT DATE = 2023-02-01
     """
-    incomedate_data = database.child("general_office").child("financial_analyzer").get().val()
+    incomedate_data = alldata["FinancialAnalyzing"]
     income_details=[]
     try:
         for year in incomedate_data["Income"]:
             for month in incomedate_data["Income"][year]:
                 for dat in incomedate_data["Income"][year][month]:
                     try:
-                        timedata = incomedate_data["Income"][year][month][dat]['enteredtimestamp']
-                        enetereddate=timestampcovert(timedata)
-                        if date == enetereddate:
+                        timedata = incomedate_data["Income"][year][month][dat]['EnteredDate']
+                        # enetereddate=timestampcovert(timedata)
+                        if date == timedata:
                             income_details.append(incomedate_data["Income"][year][month][dat])
                         else:
                             pass    
@@ -341,50 +341,70 @@ async def income_date(request: Request,date:str):
         income_details = "Not found"
     return income_details
 
-@app.get("/quotationandinvoice/quotation/{year}")
+@app.get("/quotationandinvoice/quotationyear/{year}")
 async def quotation_year(request: Request,year:str):
     """This is getting all the quotation details by year
     FORMAT YEAR = 2023
     """
-    quotation_data = database.child('customer_data').child("quotation_and_invoice").get().val()
+    quotation_data = alldata["QuotationAndInvoice"]
     try:
         quotation_details = quotation_data["QUOTATION"][year]
     except:
         quotation_details = "Not found"
     return quotation_details
 
-@app.get("/quotationandinvoice/quotation/{month}")
+@app.get("/quotationandinvoice/quotationmonth/{month}")
 async def quotation_month(request: Request,month:str):
     """This is getting all the quotation details by month
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    quotation_data = database.child('customer_data').child("quotation_and_invoice").get().val()
+    quotation_data = alldata["QuotationAndInvoice"]
     try:
         quotationmonth_data = quotation_data["QUOTATION"][currentyear][month]     
     except:
         quotationmonth_data = "Not found"
     return quotationmonth_data
 
-@app.get("/quotationandinvoice/invoice/{year}")
+@app.get("/quotationandinvoice/quotationdate/{date}")
+async def invoice_month(request: Request,date:str):
+    """This is getting all the quotation details by month
+    FORMAT MONTH = 02
+    """
+    currentyear = datetime.now().strftime("%Y")
+    quatation_data = alldata["QuotationAndInvoice"]
+    quatationlist=[]
+    try:
+        for invoiceyear in quatation_data["QUOTATION"]:
+            for invoicemonth in quatation_data["QUOTATION"][invoiceyear]:
+                for invoiceid in quatation_data["QUOTATION"][invoiceyear][invoicemonth]:
+                    timestamp = quatation_data["QUOTATION"][invoiceyear][invoicemonth][invoiceid]['TimeStamp']
+                    timedata = timestampcovert(timestamp)
+                    if date == timedata:
+                        quatationlist.append(quatation_data["QUOTATION"][invoiceyear][invoicemonth][invoiceid])
+    except:
+        quatationlist = "Not found"
+    return quatationlist
+
+@app.get("/quotationandinvoice/invoiceyear/{year}")
 async def invoice_year(request: Request,year:str):
     """This is getting all the invoice details by year
     FORMAT YEAR = 2023
     """
-    invoice_data = database.child('customer_data').child('quotation_and_invoice').get().val()
+    invoice_data = alldata["QuotationAndInvoice"]
     try:
         invoice_details=invoice_data["INVOICE"][year]
     except:
         invoice_details = "Not found"
     return invoice_details
 
-@app.get("/quotationandinvoice/invoice/{month}")
+@app.get("/quotationandinvoice/invoicemonth/{month}")
 async def invoice_month(request: Request,month:str):
     """This is getting all the invoice details by month
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    invoice_data = database.child('customer_data').child('quotation_and_invoice').get().val()
+    invoice_data = alldata["QuotationAndInvoice"]
     try:
         invoicemonth_data = invoice_data["INVOICE"][currentyear][month]     
     except:
@@ -397,7 +417,7 @@ async def invoice_month(request: Request,date:str):
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    invoice_data = database.child('customer_data').child('quotation_and_invoice').get().val()
+    invoice_data = alldata["QuotationAndInvoice"]
     invoicelist=[]
     try:
         for invoiceyear in invoice_data["INVOICE"]:
@@ -407,7 +427,9 @@ async def invoice_month(request: Request,date:str):
                     timedata = timestampcovert(timestamp)
                     if date == timedata:
                         invoicelist.append(invoice_data["INVOICE"][invoiceyear][invoicemonth][invoiceid])
-    except:
+                    else:
+                        pass    
+    except:         
         invoicelist = "Not found"
     return invoicelist
 
@@ -415,7 +437,7 @@ async def invoice_month(request: Request,date:str):
 def suggestion():
     """This is a getting all suggestion details
     """
-    suggestion_data = database.child('suggestion').get().val()
+    suggestion_data = alldata["suggestion"]
     return suggestion_data
 
 @app.get("/suggestion/{date}")
@@ -423,15 +445,12 @@ async def suggestion_date(request: Request,date:str):
     """This is getting all the suggestion details by date
     FORMAT DATE = 2023-01-01
     """
-    suggestion_data = database.child('suggestion').get().val()
+    suggestion_data = alldata["suggestion"]
     suggestiondate_data=[]
     for timedate in suggestion_data:
         try:
-            print(suggestion_data[timedate])
-            timestamp = suggestion_data[timedate]["Timestamp"]
-            timedata= timestampcovert(timestamp)
-            if timedata == date:
-                print("vjcjhchj")
+            timestamp = suggestion_data[timedate]["date"]
+            if timestamp == date:
                 suggestiondate_data.append(suggestion_data[timedate])
         except:
             pass
@@ -441,9 +460,8 @@ async def suggestion_date(request: Request,date:str):
 def refreshments():
     """This is a getting currentday refreshment details
     """
-    currentdate = "2023-06-02"
-    # currentdate = datetime.now().strftime("%Y-%m-%d")
-    refreshments_data = database.child("general_office").child('refreshments').get().val()
+    currentdate = datetime.now().strftime("%Y-%m-%d")
+    refreshments_data = alldata["refreshments"]
     try:
         for dat in refreshments_data:
                 if dat == currentdate:
@@ -460,7 +478,7 @@ async def refreshment_date(request: Request,date:str):
     """This is getting all the refreshment details by date 
        FORMAT DATE = 2023-02-01
     """
-    refreshments_data = database.child("general_office").child('refreshments').get().val()
+    refreshments_data = alldata["refreshments"]
     try:
         for dat in refreshments_data:
                 if dat == date:
@@ -483,17 +501,7 @@ def prpoints():
     """This is a getting all prpoints details
     """
     prpointsalldata=[]
-    prpoints_data = database.child('general_office').child('pr_dashboard').child('pr_points').get().val()
-    for uid in prpoints_data:
-        prpointsalldata.append(prpoints_data[uid])
-    return prpointsalldata
-
-@app.get("/prpoints")
-def prpoints():
-    """This is a getting all prpoints details
-    """
-    prpointsalldata=[]
-    prpoints_data = database.child('general_office').child('pr_dashboard').child('pr_points').get().val()
+    prpoints_data = alldata["PRDashboard"]["pr_points"]
     for uid in prpoints_data:
         prpointsalldata.append(prpoints_data[uid])
     return prpointsalldata
@@ -502,14 +510,12 @@ def prpoints():
 def prpoints_cycle():
     """This is a getting current cycle details
     """
-    # todaysDate = int(datetime.now().strftime("%d"))
     currentyear = datetime.now().strftime("%Y")
-    # currentmonth = datetime.now().strftime("%m")
     current_week = datetime.now().strftime("%W")
     prpoints=[]
     prpointstotal=[]
     prname=[]
-    prpoints_data = database.child('general_office').child('pr_dashboard').child('pr_points').get().val()
+    prpoints_data = alldata["PRDashboard"]["pr_points"]
     for uid in prpoints_data:
             try:
                 prpoints.append(prpoints_data[uid][currentyear][current_week]["weekly_points"])
@@ -529,11 +535,11 @@ def prpoints_cycle():
 
 @app.get("/prpoints/{current_week}")
 async def prpoints_month(request: Request,current_week:str):
-    """This is getting all the prpoints details by month
-    FORMAT MONTH = 02
+    """This is getting all the prpoints details by week
+    FORMAT week = 22 MUST BE TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
-    prpoints_data = database.child('general_office').child('pr_dashboard').child('pr_points').get().val()
+    prpoints_data = alldata["PRDashboard"]["pr_points"]
     prpointsdata=[]
     prname=[]
     for uid in prpoints_data:
@@ -553,17 +559,20 @@ async def prpoints_month(request: Request,current_week:str):
 def leavedetails():
     """This is a getting all leavedetails
     """
-    leaveDetails_data = database.child('office_staffs').child('leave_details').get().val()
+    leaveDetails_data = alldata["leaveDetails"]
     leavedetailsall = []
-    for uid in leaveDetails_data:
-        leavedetailsall.append(leaveDetails_data[uid]['leaveApplied'])
+    try:
+        for uid in leaveDetails_data:
+            leavedetailsall.append(leaveDetails_data[uid]['leaveApplied'])
+    except:
+        pass        
     return leavedetailsall
 
 @app.get("/leavedetails/currentmonth")
 def leavedetails():
-    """This is a getting all leavedetails
+    """This is a getting current month leavedetails
     """
-    leaveDetails_data = database.child('office_staffs').child('leave_details').get().val()
+    leaveDetails_data = alldata["leaveDetails"]
     currentyear = datetime.now().strftime("%Y")
     currentmonth = datetime.now().strftime("%m")
     leavedetailsall = []
@@ -579,22 +588,8 @@ def timestampcovert(date):
         date_obj = datetime.fromtimestamp(date)
     except:
         date_obj = datetime.fromtimestamp(date / 1000)    
-    timestampdate = date_obj.strftime("%Y-%m-%d") 
+    timestampdate = date_obj.strftime("%Y-%m-%d")
     return timestampdate
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8118 , reload=True)
-
-#     import pymongo
-
-# myclient = pymongo.MongoClient("mongodb+srv://koushik:koushik@cluste111.bq7qcte.mongodb.net/")
-# mydb = myclient["testdb"]
-# mycol = mydb["newtest"]
-
-# # mylist={'name':'create todo file'}
-# # mycol.insert_one(mylist)
-# mm = mycol.find()
-# a = next(mm)
-# print(a["staff_details"])
-# print("=====================")
-# print(a["all_staff"])
