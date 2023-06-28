@@ -61,7 +61,7 @@ async def login(request: Request,email:str,password:str):
 @app.get("/staffdetails/name/{uid}")
 async def staff_name(request: Request,uid:str):
     """This is for getting staff name
-    By UID
+    By their UID
     """
     try:
         staffname=alldata["staff_details"][uid]["name"]
@@ -72,7 +72,7 @@ async def staff_name(request: Request,uid:str):
 @app.get("/staffdetails/department/{uid}")
 async def staff_department(request: Request,uid:str):
     """This is for getting staff department
-    By UID
+    By their UID
     """
     try:
         staffdepartment=alldata["staff_details"][uid]["department"]
@@ -83,7 +83,7 @@ async def staff_department(request: Request,uid:str):
 @app.get("/staffdetails/email/{uid}")
 async def staff_email(request: Request,uid:str):
     """This is for getting staff email
-    By UID
+    By their UID
     """ 
     try:
         staffdemail=alldata["staff_details"][uid]["email"]
@@ -92,9 +92,9 @@ async def staff_email(request: Request,uid:str):
     return staffdemail
 
 @app.get("/staffdetails/{uid}")
-async def staff_details(request: Request,uid:str):
+async def staff_details_uid(request: Request,uid:str):
     """This is for getting staff name,email and department
-    By UID
+    By their UID
     """
     try:
         staffname = alldata["staff_details"][uid]["name"]
@@ -112,7 +112,7 @@ async def staff_details(request: Request,uid:str):
 
 @app.get("/absentees")
 def absentees():
-    """This is getting the today absentees
+    """This is getting the today absentees only
     """
     todays_date = datetime.now().strftime("%Y-%m-%d")
     currentmonth = datetime.now().strftime("%m")
@@ -137,7 +137,7 @@ def absentees():
 
 @app.get("/absentees/{date}")
 async def absentees_fordate(request: Request,date:str):
-    """This getting absentees by date
+    """This getting absentees by the date
     FORMAT DATE = 2023-02-01
     """
     
@@ -170,7 +170,7 @@ def inventory():
 
 @app.get("/inventory/{inventory_id}")
 async def inventory_id(request: Request,inventory_id:str):
-    """This is getting inventory details by id
+    """This is getting inventory details by inventory_id
     """
     inventory_data = alldata["inventory_management"]
     try:
@@ -188,9 +188,8 @@ def customer():
     return customer_data
 
 @app.get("/customer/{customer_number}")
-async def customer_number(request: Request,customer_number:str):
-    """This is getting customer details by phone number
-    FORMAT ATLEAST 10 DIGITS NUMBERS
+async def customer_by_number(request: Request,customer_number:str):
+    """This is getting customer details by customer phone number
     """
     try:
         customer = alldata["customer"][customer_number]
@@ -199,8 +198,8 @@ async def customer_number(request: Request,customer_number:str):
     return customer
 
 @app.get("/customer/date/{created_date}")
-async def customer_number(request: Request,created_date:str):
-    """This is getting customer details by phone number
+async def customer_by_date(request: Request,created_date:str):
+    """This is getting customer details by created date
     FORMAT 2023-01-16
     """
     customer_data = alldata["customer"]
@@ -215,7 +214,7 @@ async def customer_number(request: Request,created_date:str):
     return customerlist
 
 @app.get("/customer/created_name/{created_name}")
-async def customer_number(request: Request,created_name:str):
+async def customer_by_name(request: Request,created_name:str):
     """This is getting customer details by created person name
     FORMAT Jeeva S include space
     """
@@ -233,8 +232,8 @@ async def customer_number(request: Request,created_name:str):
     return customerlist
 
 @app.get("/staffworkmonth/{staff_uid}/{month}")
-async def staff_month(request: Request,staff_uid:str,month:str):
-    """This is getting staff workmanager details by month
+async def staffworkdone_month(request: Request,staff_uid:str,month:str):
+    """This is getting staff workmanager details by staff uid and month
     FORMAT MONTH = 02 MUST TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
@@ -246,8 +245,8 @@ async def staff_month(request: Request,staff_uid:str,month:str):
     return staff_work
 
 @app.get("/staffworkdate/{staff_id}/{date}")
-async def staff_date(request: Request,staff_id:str,date:str):
-    """This is getting staff workmanager details by date
+async def staffworkdone_date(request: Request,staff_id:str,date:str):
+    """This is getting staff workmanager details by staff uid and date
     FORMAT DATE = 2023-02-01
     """
     datedata = date
@@ -367,7 +366,7 @@ async def quotation_month(request: Request,month:str):
     return quotationmonth_data
 
 @app.get("/quotationandinvoice/quotationdate/{date}")
-async def invoice_month(request: Request,date:str):
+async def quatation_date(request: Request,date:str):
     """This is getting all the quotation details by month
     FORMAT MONTH = 02
     """
@@ -412,7 +411,7 @@ async def invoice_month(request: Request,month:str):
     return invoicemonth_data
 
 @app.get("/quotationandinvoice/invoicedate/{date}")
-async def invoice_month(request: Request,date:str):
+async def invoice_date(request: Request,date:str):
     """This is getting all the invoice details by month
     FORMAT MONTH = 02
     """
@@ -569,7 +568,7 @@ def leavedetails():
     return leavedetailsall
 
 @app.get("/leavedetails/currentmonth")
-def leavedetails():
+def currentmonth_leavedetails():
     """This is a getting current month leavedetails
     """
     leaveDetails_data = alldata["leaveDetails"]
@@ -583,6 +582,58 @@ def leavedetails():
             pass
     return leavedetailsall
 
+@app.get("/deletedcustomer/")
+def deletedcustomer():
+    """This is a getting all deleted customer
+    """
+    deletedcustomer = alldata["deletedcustomers"]
+    deletedcustomerlist=[]
+    try:
+        for customernumber in deletedcustomer:
+            deletedcustomerlist.append(deletedcustomer[customernumber])
+    except:
+        pass
+    return deletedcustomerlist
+
+@app.get("/deletedcustomer/{customer_number}")
+async def deleted_customer(request: Request,customer_number:str):
+    """This is a getting the particular deleted customer
+    """
+    deleted_customer = alldata["deletedcustomers"]
+    try:
+        deleted_customer = deleted_customer[customer_number]
+    except:
+        deleted_customer = "Not Found"    
+
+@app.get("/visits/")
+def visit():
+    """This is a getting the all visit data
+    """
+    all_visit=alldata["visit"]
+    visits_list=[]
+    try:
+        for data in all_visit:
+            visits_list.append(all_visit[data])
+    except:
+        pass
+    return visits_list
+@app.get("/visites/{month}/")
+async def visitmonth(request:Request,month:str):
+    """This is a getting the particular visit
+    FORMAT= 1 to 12 WITHOUT zero Like this 01,02
+    """
+    currentyear = datetime.now().strftime("%Y")
+    all_visit=alldata["visit"]
+    visit_list=[]
+    try:
+        for visitmonth in all_visit[currentyear]:
+            if visitmonth == month:
+                visit_list.append(visit_list[currentyear])
+            else:
+                pass
+    except:
+        pass         
+ 
 def timestampcovert(date):
     try:
         date_obj = datetime.fromtimestamp(date)
