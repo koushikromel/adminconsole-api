@@ -217,7 +217,7 @@ async def customer_by_date(request: Request,created_date:str):
         pass
     return customerlist
 
-@app.get("/customer/created_name/{created_name}")
+@app.get("/customer/created_name/{created_by}")
 async def customer_by_name(request: Request,created_name:str):
     """This is getting customer details by created person name
     FORMAT Jeeva S include space
