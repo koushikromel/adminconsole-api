@@ -8,21 +8,25 @@ import pymongo
 
 app = FastAPI()
 config = {
-  "apiKey": "AIzaSyCgJjNDVlYeOuEoUzlLJe9lulrzO1rRceY",
-  "authDomain": "adminconsole-updated.firebaseapp.com",
-  "databaseURL": "https://adminconsole-updated-default-rtdb.firebaseio.com",
-  "storageBucket": "adminconsole-updated.appspot.com",
+    "apiKey": "AIzaSyCgJjNDVlYeOuEoUzlLJe9lulrzO1rRceY",
+    "authDomain": "adminconsole-updated.firebaseapp.com",
+    "databaseURL": "https://adminconsole-updated-default-rtdb.firebaseio.com",
+    "storageBucket": "adminconsole-updated.appspot.com",
 }
 
 firebase = pyrebase.initialize_app(config=config)
+auth = firebase.auth()
 database = firebase.database()
-authentication = firebase.auth()
-
-myclient = pymongo.MongoClient("mongodb+srv://koushik:koushik@cluste111.bq7qcte.mongodb.net/")
-mydb = myclient["testdb"]
-mycol = mydb["test coll"]
-mm = mycol.find()
-alldata = next(mm)
+email = "a@a.in"
+password = "password"
+user = auth.sign_in_with_email_and_password(email, password)
+id_token = user['idToken']
+alldata = database.get(token=id_token).val()
+# myclient = pymongo.MongoClient("mongodb+srv://koushik:koushik@cluste111.bq7qcte.mongodb.net/")
+# mydb = myclient["testdb"]
+# mycol = mydb["test coll"]
+# mm = mycol.find()
+# alldata = next(mm)
 
 @app.get("/")
 def home():
@@ -64,9 +68,10 @@ async def staff_name(request: Request,uid:str):
     By their UID
     """
     try:
-        staffname=alldata["staff_details"][uid]["name"]
+        print("inside try",alldata["office_staffs"]["staff_details"])
+        staffname=alldata["office_staffs"]["staff_details"][uid]["name"]
     except:
-        staffname="Not found"    
+        staffname="Not found"
     return staffname
 
 @app.get("/staffdetails/department/{uid}")
@@ -75,7 +80,7 @@ async def staff_department(request: Request,uid:str):
     By their UID
     """
     try:
-        staffdepartment=alldata["staff_details"][uid]["department"]
+        staffdepartment=alldata["office_staffs"]["staff_details"][uid]["department"]
     except:
         staffdepartment="Not found"
     return staffdepartment
@@ -86,7 +91,7 @@ async def staff_email(request: Request,uid:str):
     By their UID
     """ 
     try:
-        staffdemail=alldata["staff_details"][uid]["email"]
+        staffdemail=alldata["office_staffs"]["staff_details"][uid]["email"]
     except:
         staffdemail="Not found" 
     return staffdemail
@@ -97,15 +102,15 @@ async def staff_details_uid(request: Request,uid:str):
     By their UID
     """
     try:
-        staffname = alldata["staff_details"][uid]["name"]
+        staffname = alldata["office_staffs"]["staff_details"][uid]["name"]
     except:
         staffname = "Not found"
     try:     
-        staffemail = alldata["staff_details"][uid]["department"]
+        staffemail = alldata["office_staffs"]["staff_details"][uid]["department"]
     except:
         staffemail = "Not found"
     try:        
-        staffdepartment = alldata["staff_details"][uid]["email"]
+        staffdepartment = alldata["office_staffs"]["staff_details"][uid]["email"]
     except:
         staffdepartment = "Not found"
     return staffname,staffemail,staffdepartment
@@ -118,8 +123,8 @@ def absentees():
     currentmonth = datetime.now().strftime("%m")
     currentyear = datetime.now().strftime("%Y")
     absenteesList = []
-    virtualdattendance = alldata["virtualAttendance"]
-    punch_data = alldata["fingerPrint"]
+    virtualdattendance = alldata["attendance_logs"]["virtual_attendance"]
+    punch_data = alldata["attendance_logs"]["fingerprint"]
     try:
         for staffuid in punch_data:
             try:
@@ -146,8 +151,8 @@ async def absentees_fordate(request: Request,date:str):
     currentmonth = dtNow.strftime("%m")
     currentyear = dtNow.strftime("%Y")
     absenteesList = []
-    virtualdattendance = alldata["virtualAttendance"]
-    punch_data = alldata["fingerPrint"]
+    virtualdattendance = alldata["attendance_logs"]["virtual_attendance"]
+    punch_data = alldata["attendance_logs"]["fingerprint"]
     for staffuid in punch_data:
         try:
             punch_data[staffuid][todays_date]
@@ -163,7 +168,7 @@ def inventory():
     """This is getting all the inventory details
     """
     inventoryList = []
-    inventory_data = alldata["inventory_management"]
+    inventory_data = alldata["general_office"]["inventory_management"]
     for id in inventory_data:
         inventoryList.append(inventory_data[id])
     return inventoryList
@@ -172,7 +177,7 @@ def inventory():
 async def inventory_id(request: Request,inventory_id:str):
     """This is getting inventory details by inventory_id
     """
-    inventory_data = alldata["inventory_management"]
+    inventory_data = alldata["general_office"]["inventory_management"]
     try:
         inventoryid_data = inventory_data[inventory_id]
         return inventoryid_data         
@@ -184,7 +189,7 @@ async def inventory_id(request: Request,inventory_id:str):
 def customer():
     """This is getting all the customer details
     """
-    customer_data = alldata["customer"]
+    customer_data = alldata["customer_data"]["customer_details"]
     return customer_data
 
 @app.get("/customer/{customer_number}")
@@ -192,7 +197,7 @@ async def customer_by_number(request: Request,customer_number:str):
     """This is getting customer details by customer phone number
     """
     try:
-        customer = alldata["customer"][customer_number]
+        customer = alldata["customer_data"]["customer_details"][customer_number]
     except:
         customer = "Not found"
     return customer
@@ -202,7 +207,7 @@ async def customer_by_date(request: Request,created_date:str):
     """This is getting customer details by created date
     FORMAT 2023-01-16
     """
-    customer_data = alldata["customer"]
+    customer_data = alldata["customer_data"]["customer_details"]
     customerlist=[]
     try:
         for customer_number in customer_data:
@@ -218,7 +223,7 @@ async def customer_by_name(request: Request,created_name:str):
     """This is getting customer details by created person name
     FORMAT Jeeva S include space
     """
-    customer_data = alldata["customer"]
+    customer_data = alldata["customer_data"]["customer_details"]
     customerlist=[]
     try:
         for customer_number in customer_data:
@@ -237,7 +242,7 @@ async def staffworkdone_month(request: Request,staff_uid:str,month:str):
     FORMAT MONTH = 02 MUST TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
-    staff_data = alldata["staff"]
+    staff_data = alldata["office_staffs"]["workdone"]
     try:
         staff_work = staff_data[staff_uid]["workManager"]["timeSheet"][currentyear][month]
     except:
@@ -250,7 +255,7 @@ async def staffworkdone_date(request: Request,staff_id:str,date:str):
     FORMAT DATE = 2023-02-01
     """
     datedata = date
-    staff_data = alldata["staff"]
+    staff_data = alldata["office_staffs"]["workdone"]
     staff_date_data = staff_data[staff_id]["workManager"]["timeSheet"]
     try:
         for year in staff_date_data:
@@ -271,7 +276,7 @@ async def expense_month(request: Request,month:str):
     FORMAT MONTH = 02 MUST TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
-    expense_data = alldata["FinancialAnalyzing"]
+    expense_data = alldata["general_office"]["financial_analyzer"]
     try:
         expensemonth_data = expense_data["Expense"][currentyear][month]
     except:
@@ -283,7 +288,7 @@ async def expense_date(request: Request,date:str):
     """This is getting all the Expense details by date
     FORMAT DATE = 2023-02-01
     """
-    expensedate_data = alldata["FinancialAnalyzing"]
+    expensedate_data = alldata["general_office"]["financial_analyzer"]
     expense_details=[]
     try:
         for year in expensedate_data["Expense"]:
@@ -308,7 +313,7 @@ async def income_month(request: Request,month:str):
     FORMAT MONTH = 02 MUST TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
-    expense_data = alldata["FinancialAnalyzing"]
+    expense_data = alldata["general_office"]["financial_analyzer"]
     try:
         expensemonth_data = expense_data["Income"][currentyear][month]
     except:
@@ -320,7 +325,7 @@ async def income_date(request: Request,date:str):
     """This is getting all the Income details by date
     FORMAT DATE = 2023-02-01
     """
-    incomedate_data = alldata["FinancialAnalyzing"]
+    incomedate_data = alldata["general_office"]["financial_analyzer"]
     income_details=[]
     try:
         for year in incomedate_data["Income"]:
@@ -345,7 +350,7 @@ async def quotation_year(request: Request,year:str):
     """This is getting all the quotation details by year
     FORMAT YEAR = 2023
     """
-    quotation_data = alldata["QuotationAndInvoice"]
+    quotation_data = alldata["customer_data"]["quotation_and_invoice"]
     try:
         quotation_details = quotation_data["QUOTATION"][year]
     except:
@@ -358,7 +363,7 @@ async def quotation_month(request: Request,month:str):
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    quotation_data = alldata["QuotationAndInvoice"]
+    quotation_data = alldata["customer_data"]["quotation_and_invoice"]
     try:
         quotationmonth_data = quotation_data["QUOTATION"][currentyear][month]     
     except:
@@ -371,7 +376,7 @@ async def quatation_date(request: Request,date:str):
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    quatation_data = alldata["QuotationAndInvoice"]
+    quatation_data = alldata["customer_data"]["quotation_and_invoice"]
     quatationlist=[]
     try:
         for invoiceyear in quatation_data["QUOTATION"]:
@@ -390,7 +395,7 @@ async def invoice_year(request: Request,year:str):
     """This is getting all the invoice details by year
     FORMAT YEAR = 2023
     """
-    invoice_data = alldata["QuotationAndInvoice"]
+    invoice_data = alldata["customer_data"]["quotation_and_invoice"]
     try:
         invoice_details=invoice_data["INVOICE"][year]
     except:
@@ -403,7 +408,7 @@ async def invoice_month(request: Request,month:str):
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    invoice_data = alldata["QuotationAndInvoice"]
+    invoice_data = alldata["customer_data"]["quotation_and_invoice"]
     try:
         invoicemonth_data = invoice_data["INVOICE"][currentyear][month]     
     except:
@@ -416,7 +421,7 @@ async def invoice_date(request: Request,date:str):
     FORMAT MONTH = 02
     """
     currentyear = datetime.now().strftime("%Y")
-    invoice_data = alldata["QuotationAndInvoice"]
+    invoice_data = alldata["customer_data"]["quotation_and_invoice"]
     invoicelist=[]
     try:
         for invoiceyear in invoice_data["INVOICE"]:
@@ -436,7 +441,7 @@ async def invoice_date(request: Request,date:str):
 def suggestion():
     """This is a getting all suggestion details
     """
-    suggestion_data = alldata["suggestion"]
+    suggestion_data = alldata["others"]["suggestion"]
     return suggestion_data
 
 @app.get("/suggestion/{date}")
@@ -444,7 +449,7 @@ async def suggestion_date(request: Request,date:str):
     """This is getting all the suggestion details by date
     FORMAT DATE = 2023-01-01
     """
-    suggestion_data = alldata["suggestion"]
+    suggestion_data = alldata["others"]["suggestion"]
     suggestiondate_data=[]
     for timedate in suggestion_data:
         try:
@@ -460,7 +465,7 @@ def refreshments():
     """This is a getting currentday refreshment details
     """
     currentdate = datetime.now().strftime("%Y-%m-%d")
-    refreshments_data = alldata["refreshments"]
+    refreshments_data = alldata["general_office"]["refreshments"]
     try:
         for dat in refreshments_data:
                 if dat == currentdate:
@@ -477,7 +482,7 @@ async def refreshment_date(request: Request,date:str):
     """This is getting all the refreshment details by date 
        FORMAT DATE = 2023-02-01
     """
-    refreshments_data = alldata["refreshments"]
+    refreshments_data = alldata["general_office"]["refreshments"]
     try:
         for dat in refreshments_data:
                 if dat == date:
@@ -500,7 +505,7 @@ def prpoints():
     """This is a getting all prpoints details
     """
     prpointsalldata=[]
-    prpoints_data = alldata["PRDashboard"]["pr_points"]
+    prpoints_data = alldata["general_office"]["pr_dashboard"]["pr_points"]
     for uid in prpoints_data:
         prpointsalldata.append(prpoints_data[uid])
     return prpointsalldata
@@ -514,7 +519,7 @@ def prpoints_cycle():
     prpoints=[]
     prpointstotal=[]
     prname=[]
-    prpoints_data = alldata["PRDashboard"]["pr_points"]
+    prpoints_data = alldata["general_office"]["pr_dashboard"]["pr_points"]
     for uid in prpoints_data:
             try:
                 prpoints.append(prpoints_data[uid][currentyear][current_week]["weekly_points"])
@@ -538,7 +543,7 @@ async def prpoints_month(request: Request,current_week:str):
     FORMAT week = 22 MUST BE TWO DIGITS
     """
     currentyear = datetime.now().strftime("%Y")
-    prpoints_data = alldata["PRDashboard"]["pr_points"]
+    prpoints_data = alldata["general_office"]["pr_dashboard"]["pr_points"]
     prpointsdata=[]
     prname=[]
     for uid in prpoints_data:
@@ -558,7 +563,7 @@ async def prpoints_month(request: Request,current_week:str):
 def leavedetails():
     """This is a getting all leavedetails
     """
-    leaveDetails_data = alldata["leaveDetails"]
+    leaveDetails_data = alldata["office_staffs"]["leaveDetails"]
     leavedetailsall = []
     try:
         for uid in leaveDetails_data:
@@ -571,7 +576,7 @@ def leavedetails():
 def currentmonth_leavedetails():
     """This is a getting current month leavedetails
     """
-    leaveDetails_data = alldata["leaveDetails"]
+    leaveDetails_data = alldata["office_staffs"]["leaveDetails"]
     currentyear = datetime.now().strftime("%Y")
     currentmonth = datetime.now().strftime("%m")
     leavedetailsall = []
@@ -586,7 +591,7 @@ def currentmonth_leavedetails():
 def deletedcustomer():
     """This is a getting all deleted customer
     """
-    deletedcustomer = alldata["deletedcustomers"]
+    deletedcustomer = alldata["customer_data"]["deleted_customers"]
     deletedcustomerlist=[]
     try:
         for customernumber in deletedcustomer:
@@ -599,7 +604,7 @@ def deletedcustomer():
 async def deleted_customer(request: Request,customer_number:str):
     """This is a getting the particular deleted customer
     """
-    deleted_customer = alldata["deletedcustomers"]
+    deleted_customer = alldata["customer_data"]["deleted_customers"]
     try:
         deleted_customer = deleted_customer[customer_number]
     except:
@@ -609,7 +614,7 @@ async def deleted_customer(request: Request,customer_number:str):
 def visit():
     """This is a getting the all visit data
     """
-    all_visit=alldata["visit"]
+    all_visit=alldata["customer_data"]["visit_details"]
     visits_list=[]
     try:
         for data in all_visit:
@@ -623,7 +628,7 @@ async def visitmonth(request:Request,month:str):
     FORMAT= 1 to 12 WITHOUT zero Like this 01,02
     """
     currentyear = datetime.now().strftime("%Y")
-    all_visit=alldata["visit"]
+    all_visit=alldata["customer_data"]["visit_details"]
     visit_list=[]
     try:
         for visitmonth in all_visit[currentyear]:

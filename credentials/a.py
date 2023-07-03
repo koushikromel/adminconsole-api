@@ -28,7 +28,7 @@ import json
 # print(docstring)
 
 
-a = requests.get(url="http://127.0.0.1:8118/visites/03/")
+a = requests.get(url="http://127.0.0.1:8118/staffdetails/name/15hn2Sap3NQ2MFnea07qLINLTaA2")
 print(a.json())
 
 # a = requests.post(url="http://127.0.0.1:8118/customer/number", json={"number":"1522328535"})
