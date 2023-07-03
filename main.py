@@ -1,9 +1,7 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException, status
+from datetime import datetime
 import uvicorn
 import pyrebase
-from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException, status
-from datetime import datetime
 import pymongo
 
 app = FastAPI()
