@@ -45,7 +45,7 @@ async def login(request: Request,email:str,password:str):
     # email = response["email"]
     # password = response["password"]
     try:
-        user = authentication.sign_in_with_email_and_password(email=email, password=password)
+        user = auth.sign_in_with_email_and_password(email=email, password=password)
         userid = user["localId"]
         return {"user id":userid}
     except Exception as error:
@@ -68,7 +68,6 @@ async def staff_name(request: Request,uid:str):
     By their UID
     """
     try:
-        print("inside try",alldata["office_staffs"]["staff_details"])
         staffname=alldata["office_staffs"]["staff_details"][uid]["name"]
     except:
         staffname="Not found"
